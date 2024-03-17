@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:eco_eats/add_item.dart';
+import 'package:eco_eats/utils/helper_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -16,6 +17,9 @@ class EditFoodItemPage extends StatefulWidget {
 }
 
 class _EditFoodItemPageState extends State<EditFoodItemPage> {
+
+
+  // --- TEXT EDITING CONTROLLERS 
   late TextEditingController _nameController;
   late TextEditingController _quantityController;
   late TextEditingController _expiryDateController;
@@ -27,7 +31,7 @@ class _EditFoodItemPageState extends State<EditFoodItemPage> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.foodItem['name']);
-    _quantityController = TextEditingController(text: widget.foodItem['quantity'].toString());
+    _quantityController =TextEditingController(text: widget.foodItem['quantity'].toString());
     _expiryDateController = TextEditingController(text: widget.foodItem['expiryDate'].toDate().toString());
     _selectedCategory = widget.foodItem['category'];
     _categories = ["Bread", "Milk", "Cheese"]; // Default categories
@@ -49,45 +53,45 @@ class _EditFoodItemPageState extends State<EditFoodItemPage> {
       if (pickedImage != null) {
         _imageFile = File(pickedImage.path);
       } else {
-        print('No image selected.');
+        displayMessage('No image selected', context);
       }
     });
   }
 
   Future<String?> _uploadImage(File imageFile) async {
     try {
-      firebase_storage.Reference ref = firebase_storage.FirebaseStorage.instance
-          .ref()
-          .child('food_images/${DateTime.now().millisecondsSinceEpoch}');
+      firebase_storage.Reference ref = firebase_storage.FirebaseStorage.instance.ref().child('food_images/${DateTime.now().millisecondsSinceEpoch}');
       await ref.putFile(imageFile);
       return ref.getDownloadURL();
     } catch (e) {
-      print('Error uploading image: $e');
+      displayMessage('Error uploading image: $e', context);
       return null;
     }
   }
 
-Future<void> _updateFoodItemInFirestore(FoodItem foodItem) async {
-  try {
-    String? imageUrl = widget.foodItem['imageUrl']; // Keep the existing imageUrl by default
-    if (_imageFile != null) {
-      // If a new image is selected, upload it and get the download URL
-      imageUrl = await _uploadImage(_imageFile!);
+  Future<void> _updateFoodItemInFirestore(FoodItem foodItem) async {
+    try {
+      String? imageUrl = widget.foodItem['imageUrl']; // Keep the existing imageUrl by default
+      if (_imageFile != null) {
+        // If a new image is selected, upload it and get the download URL
+        imageUrl = await _uploadImage(_imageFile!);
+      }
+      await FirebaseFirestore.instance
+          .collection('foodItems')
+          .doc(widget.foodItem.id)
+          .update({
+        'category': foodItem.category,
+        'name': foodItem.name,
+        'quantity': foodItem.quantity,
+        'expiryDate': foodItem.expiryDate,
+        'imageUrl': imageUrl, // Update imageUrl only if a new image is selected
+      });
+      displayMessage('Food item updated in Firestore.', context);
+      Navigator.pop(context); // Navigate back to previous screen
+    } catch (e) {
+      displayMessage('Error updating food item in Firestore: $e', context);
     }
-    await FirebaseFirestore.instance.collection('foodItems').doc(widget.foodItem.id).update({
-      'category': foodItem.category,
-      'name': foodItem.name,
-      'quantity': foodItem.quantity,
-      'expiryDate': foodItem.expiryDate,
-      'imageUrl': imageUrl, // Update imageUrl only if a new image is selected
-    });
-    print('Food item updated in Firestore.');
-    Navigator.pop(context); // Navigate back to previous screen
-  } catch (e) {
-    print('Error updating food item in Firestore: $e');
   }
-}
-
 
   @override
   Widget build(BuildContext context) {
@@ -100,37 +104,29 @@ Future<void> _updateFoodItemInFirestore(FoodItem foodItem) async {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-
-            
             SizedBox(height: 16.0),
-            _imageFile != null ? CircleAvatar(
-              radius: 50,
-              backgroundColor: Colors.grey[200],
-              child: ClipOval(
-                child: Image.file(
-                  _imageFile!,
-                  width: 100,
-                  height: 100,
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ) : CircleAvatar(
-              radius: 50,
-              backgroundImage: NetworkImage(widget.foodItem['imageUrl'])
-            ),
-
+            _imageFile != null
+                ? CircleAvatar(
+                    radius: 50,
+                    backgroundColor: Colors.grey[200],
+                    child: ClipOval(
+                      child: Image.file(
+                        _imageFile!,
+                        width: 100,
+                        height: 100,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  )
+                : CircleAvatar(
+                    radius: 50,
+                    backgroundImage: NetworkImage(widget.foodItem['imageUrl'])),
             ElevatedButton(
               onPressed: () {
                 _getImage();
               },
               child: Text('Select Food Picture'),
             ),
-
-
-
-
-
-
             DropdownButtonFormField<String>(
               value: _selectedCategory,
               onChanged: (value) {
@@ -172,7 +168,6 @@ Future<void> _updateFoodItemInFirestore(FoodItem foodItem) async {
                 }
               },
             ),
-            
             SizedBox(height: 16.0),
             ElevatedButton(
               onPressed: () {

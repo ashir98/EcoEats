@@ -37,7 +37,7 @@ import 'package:page_transition/page_transition.dart';
     ScaffoldMessenger.of(context).showSnackBar(
       
       SnackBar(
-        duration: Duration(seconds: 1),
+        duration: Duration(seconds: 2),
         content: Text(message, style: TextStyle(color: Colors.purple.shade400),),
         backgroundColor: Colors.white,
 

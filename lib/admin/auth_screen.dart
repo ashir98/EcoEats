@@ -30,7 +30,7 @@ class AdminLoginPage extends StatelessWidget {
             Icon(
               Icons.admin_panel_settings,
               size: 100,
-              color: Colors.blue,
+              color: Colors.purple.shade400,
             ),
             SizedBox(height: 20),
             Text(

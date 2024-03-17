@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:eco_eats/utils/helper_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -6,16 +7,20 @@ import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 
-
 class AddFoodItemPage extends StatefulWidget {
   @override
   _AddFoodItemPageState createState() => _AddFoodItemPageState();
+  
 }
 
 class _AddFoodItemPageState extends State<AddFoodItemPage> {
+
+
+  // --- TEXT EDITING CONTROLLERS 
   late TextEditingController _nameController;
   late TextEditingController _quantityController;
   late TextEditingController _expiryDateController;
+  late TextEditingController _barcodeController;
   late String _selectedCategory;
   late List<String> _categories;
   File? _imageFile;
@@ -26,6 +31,7 @@ class _AddFoodItemPageState extends State<AddFoodItemPage> {
     _nameController = TextEditingController();
     _quantityController = TextEditingController();
     _expiryDateController = TextEditingController();
+    _barcodeController = TextEditingController();
     _selectedCategory = "Bread"; // Default category
     _categories = ["Bread", "Milk", "Cheese"]; // Default categories
   }
@@ -46,20 +52,18 @@ class _AddFoodItemPageState extends State<AddFoodItemPage> {
       if (pickedImage != null) {
         _imageFile = File(pickedImage.path);
       } else {
-        print('No image selected.');
+        displayMessage('No image selected.',context);
       }
     });
   }
 
   Future<String?> _uploadImage(File imageFile) async {
     try {
-      firebase_storage.Reference ref = firebase_storage.FirebaseStorage.instance
-          .ref()
-          .child('food_images/${DateTime.now().millisecondsSinceEpoch}');
+      firebase_storage.Reference ref = firebase_storage.FirebaseStorage.instance.ref().child('food_images/${DateTime.now().millisecondsSinceEpoch}');
       await ref.putFile(imageFile);
       return ref.getDownloadURL();
     } catch (e) {
-      print('Error uploading image: $e');
+      displayMessage('Error uploading image: $e', context);
       return null;
     }
   }
@@ -77,9 +81,42 @@ class _AddFoodItemPageState extends State<AddFoodItemPage> {
         'expiryDate': foodItem.expiryDate,
         'imageUrl': imageUrl,
       });
-      print('Food item added to Firestore.');
+      displayMessage('Food item added to Firestore.', context);
     } catch (e) {
-      print('Error adding food item to Firestore: $e');
+      displayMessage('Error adding food item to Firestore: $e', context);
+    }
+  }
+
+  Future<void> _scanBarcode() async {
+    String barcode = await FlutterBarcodeScanner.scanBarcode(
+      '#ff6666', // Color for the scan button
+      'Cancel', // Text for the cancel button
+      false, // Whether to show flash icon
+      ScanMode.BARCODE, // Scan mode
+    );
+
+    setState(() {
+      _barcodeController.text = barcode;
+    });
+
+    if (barcode != '-1') {
+      // Retrieve item details from Firestore using the scanned barcode
+      DocumentSnapshot snapshot = await FirebaseFirestore.instance.collection('admin_products').doc(barcode).get();
+
+      if (snapshot.exists) {
+        // Populate form fields with retrieved details
+        setState(() {
+          _nameController.text = snapshot['name'];
+          _quantityController.text = snapshot['quantity'].toString();
+          Timestamp expiryDateTimestamp = snapshot['expiryDate'];
+          _expiryDateController.text = DateFormat('yyyy-MM-dd').format(expiryDateTimestamp.toDate());
+          _selectedCategory = snapshot['category'];
+        });
+      } else {
+        // Handle case where the item with the scanned barcode does not exist
+        displayMessage('Item with barcode $barcode not found.', context);
+            
+      }
     }
   }
 
@@ -87,40 +124,6 @@ class _AddFoodItemPageState extends State<AddFoodItemPage> {
 
 
 
-
-
-Future<void> _scanBarcode() async {
-  String barcode = await FlutterBarcodeScanner.scanBarcode(
-    '#ff6666', // Color for the scan button
-    'Cancel', // Text for the cancel button
-    false, // Whether to show flash icon
-    ScanMode.BARCODE, // Scan mode
-  );
-
-  if (barcode != '-1') {
-    // Retrieve item details from Firestore using the scanned barcode
-    DocumentSnapshot snapshot = await FirebaseFirestore.instance.collection('admin_products').doc(barcode).get();
-
-    if (snapshot.exists) {
-      // Populate form fields with retrieved details
-      setState(() {
-        _nameController.text = snapshot['name'];
-        _quantityController.text = snapshot['quantity'].toString();
-        Timestamp expiryDateTimestamp = snapshot['expiryDate'];
-        _expiryDateController.text = DateFormat('yyyy-MM-dd').format(expiryDateTimestamp.toDate());
-        _selectedCategory = snapshot['category'];
-      });
-    } else {
-      // Handle case where the item with the scanned barcode does not exist
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Item with barcode $barcode not found.'),
-          duration: Duration(seconds: 3),
-        ),
-      );
-    }
-  }
-}
 
 
 
@@ -140,7 +143,7 @@ Future<void> _scanBarcode() async {
             SizedBox(height: 16.0),
             _imageFile != null
                 ? CircleAvatar(
-                    radius: 50,
+                    radius: 60,
                     backgroundColor: Colors.grey[200],
                     child: ClipOval(
                       child: Image.file(
@@ -151,18 +154,28 @@ Future<void> _scanBarcode() async {
                       ),
                     ),
                   )
-                : Icon(
-                    Icons.person,
-                    size: 50,
-                    color: Colors.grey,
-                  ),
+                : CircleAvatar(
+                  radius: 60,
+                  child: Icon(
+                      Icons.question_mark_rounded,
+                      size: 50,
+                      color: Colors.grey,
+                    ),
+                ),
             TextButton(
               onPressed: () {
                 _getImage();
               },
               child: Text('Select Food Picture'),
             ),
+
+
             SizedBox(height: 16.0),
+
+
+
+
+
             DropdownButtonFormField<String>(
               value: _selectedCategory,
               onChanged: (value) {
@@ -178,15 +191,21 @@ Future<void> _scanBarcode() async {
               }).toList(),
               decoration: InputDecoration(labelText: 'Category'),
             ),
+
+
             TextFormField(
               controller: _nameController,
               decoration: InputDecoration(labelText: 'Name'),
             ),
+
+
             TextFormField(
               controller: _quantityController,
               keyboardType: TextInputType.number,
               decoration: InputDecoration(labelText: 'Quantity'),
             ),
+
+
             TextFormField(
               controller: _expiryDateController,
               decoration: InputDecoration(labelText: 'Expiry Date'),
@@ -205,31 +224,61 @@ Future<void> _scanBarcode() async {
               },
             ),
 
+            TextFormField(
+              controller: _barcodeController,
+              decoration: InputDecoration(labelText: 'Barcode'),
+              readOnly: true,
+            ),
+
+
+
+
+
+
+
             SizedBox(height: 16.0),
+
+
+
+
+
+
+
+
+
+
+
+
             ElevatedButton(
               onPressed: () {
-                String name = _nameController.text.trim();
-                double quantity = double.parse(_quantityController.text.trim());
-                DateTime expiryDate = DateTime.parse(_expiryDateController.text.trim());
+                if (_nameController.text.isEmpty &&_quantityController.text.isEmpty && _expiryDateController.text.isEmpty) {
+                  displayMessage("please fill all the fields", context);
+                } else {
+                  String name = _nameController.text.trim();
+                  double quantity = double.parse(_quantityController.text.trim());
+                  DateTime expiryDate = DateTime.parse(_expiryDateController.text.trim());
 
-                // Create FoodItem object
-                FoodItem foodItem = FoodItem(
-                  category: _selectedCategory,
-                  name: name,
-                  quantity: quantity,
-                  expiryDate: expiryDate,
-                );
+                  // Create FoodItem object
+                  FoodItem foodItem = FoodItem(
+                    category: _selectedCategory,
+                    name: name,
+                    quantity: quantity,
+                    expiryDate: expiryDate,
+                  );
 
-                // Save food item to Firestore
-                _addFoodItemToFirestore(foodItem);
+                  // Save food item to Firestore
+                  _addFoodItemToFirestore(foodItem).then((value) {
+                    // Clear input fields
+                    _nameController.clear();
+                    _quantityController.clear();
+                    _expiryDateController.clear();
+                    setState(() {
+                      _imageFile = null; // Clear selected image
+                    });
 
-                // Clear input fields
-                _nameController.clear();
-                _quantityController.clear();
-                _expiryDateController.clear();
-                setState(() {
-                  _imageFile = null; // Clear selected image
-                });
+                    Navigator.pop(context);
+                  });
+                }
               },
               child: Text('Add Food Item'),
             ),
@@ -239,29 +288,16 @@ Future<void> _scanBarcode() async {
 
 
 
-
-
+      
       floatingActionButton: FloatingActionButton(
+        
         onPressed: _scanBarcode,
-        tooltip: 'Scan Barcode',
+        tooltip: 'Scan barcode to add item',
         child: Icon(Icons.qr_code_scanner),
       ),
-    
-
-
-
-
-
-
-      
-
     );
   }
 }
-
-
-
-
 
 class FoodItem {
   String category;
@@ -270,5 +306,10 @@ class FoodItem {
   DateTime expiryDate;
   String? imageUrl; // Add imageUrl field
 
-  FoodItem({required this.category, required this.name, required this.quantity, required this.expiryDate, this.imageUrl});
+  FoodItem(
+      {required this.category,
+      required this.name,
+      required this.quantity,
+      required this.expiryDate,
+      this.imageUrl});
 }

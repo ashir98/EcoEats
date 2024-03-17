@@ -3,12 +3,12 @@ import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 
-class AddProductPage extends StatefulWidget {
+class AddItemPage extends StatefulWidget {
   @override
-  _AddProductPageState createState() => _AddProductPageState();
+  _AddItemPageState createState() => _AddItemPageState();
 }
 
-class _AddProductPageState extends State<AddProductPage> {
+class _AddItemPageState extends State<AddItemPage> {
   late TextEditingController _nameController;
   late TextEditingController _quantityController;
   late TextEditingController _expiryDateController;

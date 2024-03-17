@@ -69,7 +69,7 @@ class _ProductListPageState extends State<ProductListPage> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
           
-          gotoPage( AddProductPage(), context);
+          gotoPage( AddItemPage(), context);
         },
         label: Row(
           children: [
