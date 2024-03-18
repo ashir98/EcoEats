@@ -1,7 +1,9 @@
-import 'package:eco_eats/admin/add_product_page.dart';
+import 'package:eco_eats/admin/items/add_item_page.dart';
+import 'package:eco_eats/admin/items/edit_item_page.dart'; // Import the edit item page
 import 'package:eco_eats/utils/helper_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 
 class ProductListPage extends StatefulWidget {
   @override
@@ -40,36 +42,60 @@ class _ProductListPageState extends State<ProductListPage> {
             itemCount: snapshot.data!.docs.length,
             itemBuilder: (context, index) {
               var product = snapshot.data!.docs[index];
+              DateTime expiryDate = (product['expiryDate'] as Timestamp).toDate(); // Convert Timestamp to DateTime
+
               return ListTile(
                 title: Text(
                   product['name'],
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                subtitle: Text(
-                  'Category: ${product['category']}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Category: ${product['category']}',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      'Quantity: ${product['quantity']}',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      'Expiry: ${DateFormat('yyyy-MM-dd').format(expiryDate)}', // Format the expiry date
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      'Barcode: ${product['barcode']}',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
-                trailing: IconButton(
-                  icon: Icon(Icons.delete),
-                  onPressed: () {
-                    _deleteProduct(product.id);
-                  },
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.edit),
+                      onPressed: () {
+                        _editProduct(product.id); // Navigate to edit product page
+                      },
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.delete),
+                      onPressed: () {
+                        _deleteProduct(product.id);
+                      },
+                    ),
+                  ],
                 ),
               );
             },
           );
         },
       ),
-
-
-
-
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          
-          gotoPage( AddItemPage(), context);
+          gotoPage(AddItemPage(), context);
         },
         label: Row(
           children: [
@@ -79,6 +105,10 @@ class _ProductListPageState extends State<ProductListPage> {
         ),
       ),
     );
+  }
+
+  void _editProduct(String productId) {
+    gotoPage(EditItemPage(productId: productId), context); // Navigate to edit product page
   }
 
   Future<void> _deleteProduct(String productId) async {

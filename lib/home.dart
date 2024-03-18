@@ -1,134 +1,136 @@
 import 'package:eco_eats/admin/auth_screen.dart';
-import 'package:eco_eats/main.dart';
 import 'package:eco_eats/notifications/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
+import 'package:transparent_image/transparent_image.dart';
 import 'add_item.dart';
 import 'edit_item.dart';
 import 'utils/helper_functions.dart';
-
-
-
-
-
-
-
+import 'package:lottie/lottie.dart';
 
 class HomePage extends StatefulWidget {
-
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
-
-
   NotificationService notificationService = NotificationService();
 
-
-      @override
+  @override
   void initState() {
     // TODO: implement initState
     super.initState();
 
     notificationService.initializeNotifications();
-
-
   }
 
   @override
   Widget build(BuildContext context) {
-
-
-
-
-
-
-
-
-
     return Scaffold(
-
       appBar: AppBar(
         title: Text('Food Items'),
         actions: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 15),
             child: GestureDetector(
-              onTap: () => gotoPage(AdminLoginPage() ,context),
-
+              onTap: () => gotoPage(AdminLoginPage(), context),
               child: CircleAvatar(
-                child: Icon(Icons.person, color: Colors.grey.shade800, ) ,
+                child: Icon(
+                  Icons.person,
+                  color: Colors.grey.shade800,
+                ),
               ),
             ),
           )
         ],
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('foodItems').snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(
-              child: CircularProgressIndicator(),
-            );
-          }
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance.collection('foodItems').snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(
+                child: CircularProgressIndicator(),
+              );
+            }
 
-          if (snapshot.hasError) {
-            return Center(
-              child: Text('Error: ${snapshot.error}'),
-            );
-          }
+            if (snapshot.hasError) {
+              return Center(
+                child: Text('Error: ${snapshot.error}'),
+              );
+            }
 
-          if (snapshot.hasData && snapshot.data!.docs.isEmpty) {
-            return Center(
-              child: Text('No food items found.'),
-            );
-          }
+            if (snapshot.hasData && snapshot.data!.docs.isEmpty) {
+              return Center(
+                child: Column(
+                  children: [
+                    Lottie.asset("assets/lottie/empty.json"),
 
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: ListView.builder(
+                    Text('No items found', style: TextStyle(color: Colors.purple.shade400, fontSize: 20),),
+                  ],
+                ),
+              );
+            }
+
+            return ListView.builder(
               itemCount: snapshot.data!.docs.length,
               itemBuilder: (context, index) {
-
-
-
-
-
                 var foodItem = snapshot.data!.docs[index];
 
+                notificationService.scheduleNotifications(snapshot.data!.docs);
 
-
-                notificationService.scheduleNotifications( snapshot.data!.docs );
-            
                 // Convert the 'expiryDate' Timestamp to a DateTime object
-                DateTime expiryDate = (foodItem['expiryDate'] as Timestamp).toDate();
-            
+                DateTime expiryDate =(foodItem['expiryDate'] as Timestamp).toDate();
+
                 // Format the DateTime to display only the date
                 String formattedDate = DateFormat('yyyy-MM-dd').format(expiryDate);
-            
+
+                // Calculate difference in days between today and the expiry date
+                int daysDifference = expiryDate.difference(DateTime.now()).inDays;
+
+                // Determine if the expiry date is today or just a day away
+                bool isExpiringSoon = daysDifference == 0 || daysDifference == 1;
+
                 return SizedBox(
                   height: 100.h,
-                  child: Card(
-                    child: GestureDetector(
-                      onTap: () {
-                        gotoPage(EditFoodItemPage(foodItem: foodItem), context);
-                      },
+                  child: GestureDetector(
+                    onTap: () {
+                      gotoPage(EditFoodItemPage(foodItem: foodItem), context);
+                    },
+                    child: Card(
                       child: Row(
                         children: [
                           Expanded(
                             flex: 2,
-                            child: Card(
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(10),
-                                child: Image.network(
-                                  foodItem['imageUrl'],
-                                  fit: BoxFit.fill,
-                                  width: double.infinity,
-                                  height: double.infinity,
+                            child: Padding(
+                              padding: const EdgeInsets.all(2),
+                              child: Card(
+                                elevation: 0,
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: FadeInImage.memoryNetwork(
+                                    imageErrorBuilder: (context, error, stackTrace) {
+                                      return Center(
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(Icons.error_outlined),
+                                            Text(
+                                              "Error loading",
+                                            )
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                    placeholder: kTransparentImage,
+                                    image: foodItem['imageUrl'],
+                                    fit: BoxFit.fill,
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                  ),
                                 ),
                               ),
                             ),
@@ -146,7 +148,12 @@ class _HomePageState extends State<HomePage> {
                                     children: [
                                       Text(
                                         formattedDate,
-                                        style: TextStyle(color: Colors.grey.shade600),
+                                        style: TextStyle(
+                                          color: isExpiringSoon
+                                              ? Colors.red
+                                              : Colors.grey
+                                                  .shade600, // Change color based on expiry date
+                                        ),
                                       ),
                                       GestureDetector(
                                         onTap: () {
@@ -167,8 +174,13 @@ class _HomePageState extends State<HomePage> {
                                                   TextButton(
                                                     onPressed: () {
                                                       // Delete food item from Firestore
-                                                      FirebaseFirestore.instance.collection('foodItems').doc(foodItem.id).delete();
-                                                      Navigator.pop(context); // Close dialog
+                                                      FirebaseFirestore.instance
+                                                          .collection(
+                                                              'foodItems')
+                                                          .doc(foodItem.id)
+                                                          .delete();
+                                                      Navigator.pop(
+                                                          context); // Close dialog
                                                     },
                                                     child: Text('Delete'),
                                                   ),
@@ -190,7 +202,7 @@ class _HomePageState extends State<HomePage> {
                                   ),
                                   Text(
                                     foodItem['category'],
-                                    style: TextStyle(color: Colors.grey.shade600),
+                                    style:TextStyle(color: Colors.grey.shade600),
                                   )
                                 ],
                               ),
@@ -202,13 +214,12 @@ class _HomePageState extends State<HomePage> {
                   ),
                 );
               },
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          
           gotoPage(AddFoodItemPage(), context);
         },
         label: Row(
@@ -220,19 +231,4 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
-
-
-  
 }
-
-
-
-
-
-
-
-
-
-
-
-

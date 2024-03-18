@@ -82,7 +82,7 @@ Future<void> scheduleNotification(DateTime expiryDate, ) async {
     1,
     'Food Expiry Reminder',
     'One of your food items is expiring soon. Check it out!',
-    scheduledDate.subtract(Duration(hours: 1)), // Notify 60 minutes before expiry
+    scheduledDate.subtract(Duration(minutes: 30)), // Notify 60 minutes before expiry
     notificationDetails,
     androidScheduleMode: AndroidScheduleMode.alarmClock,
     uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
@@ -92,3 +92,6 @@ Future<void> scheduleNotification(DateTime expiryDate, ) async {
 
 
 }
+
+
+// ArgumentError (Invalid argument (scheduledDate): Must be a date in the future: Instance of 'TZDateTime')

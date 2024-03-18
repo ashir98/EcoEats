@@ -38,9 +38,9 @@ import 'package:page_transition/page_transition.dart';
       
       SnackBar(
         duration: Duration(seconds: 2),
-        content: Text(message, style: TextStyle(color: Colors.purple.shade400),),
-        backgroundColor: Colors.white,
-
+        content: Text(message, style: TextStyle(color: Colors.purple.shade50),),
+        backgroundColor: Colors.purple.shade300,
+        
       )
     );
   }

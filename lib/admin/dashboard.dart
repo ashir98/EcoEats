@@ -1,9 +1,8 @@
-import 'package:eco_eats/admin/add_product_page.dart';
-import 'package:eco_eats/admin/item_list.dart';
+import 'package:eco_eats/admin/foodbank/foodbank_list.dart';
+import 'package:eco_eats/admin/items/item_list.dart';
 import 'package:eco_eats/home.dart';
 import 'package:eco_eats/utils/helper_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 class DashBoard extends StatelessWidget {
@@ -39,21 +38,36 @@ class DashBoard extends StatelessWidget {
 
 
 
-      body: Column(
-        children: [
-          Expanded(
-            child: SizedBox(
-              width: double.infinity,
-              child: GestureDetector(
-                onTap: () => gotoPage( ProductListPage() ,context),
-                child: Card(
-                  child: Center(child: Text("Products", style: TextStyle(color: Colors.purple.shade200, fontSize: 30),)),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            Expanded(
+              child: SizedBox(
+                width: double.infinity,
+                child: GestureDetector(
+                  onTap: () => gotoPage( ProductListPage() ,context),
+                  child: Card(
+                    child: Center(child: Text("Products", style: TextStyle(color: Colors.purple.shade200, fontSize: 30),)),
+                  ),
                 ),
               ),
             ),
-          )
-        ],
-
+        
+            Expanded(
+              child: SizedBox(
+                width: double.infinity,
+                child: GestureDetector(
+                  onTap: () => gotoPage( FoodBankList() ,context),
+                  child: Card(
+                    child: Center(child: Text("Foodbanks", style: TextStyle(color: Colors.purple.shade200, fontSize: 30),)),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        
+        ),
       ),
 
 
